@@ -2,13 +2,23 @@
 const { resourceFromAttributes } = require('@opentelemetry/resources');
 const { ATTR_SERVICE_NAME } = require('@opentelemetry/semantic-conventions');
 
-const { NodeSDK } = require('@opentelemetry/sdk-node');
+const opentelemetry = require('@opentelemetry/sdk-node');
 
 const {
-   getNodeAutoInstrumentations,
+  getNodeAutoInstrumentations,
 } = require('@opentelemetry/auto-instrumentations-node');
+const {
+  OTLPTraceExporter,
+} = require('@opentelemetry/exporter-trace-otlp-proto');
 
-const { ConsoleSpanExporter } = require('@opentelemetry/sdk-trace-node');
+// The OTLPMetricExporter can be used if we want to export otel metrics,
+// but Jaeger doesn't seem to have a metrics UI for this. So for now I'll
+// keep the console metrics exporter. In the real world we'd probably set up
+// a Prometheus instance or something else to ingest the metrics.
+// const {
+//   OTLPMetricExporter,
+// } = require('@opentelemetry/exporter-metrics-otlp-proto');
+// const { PeriodicExportingMetricReader } = require('@opentelemetry/sdk-metrics');
 
 const {
    ConsoleMetricExporter,
@@ -20,22 +30,20 @@ const { ExpressInstrumentation } = require("opentelemetry-instrumentation-expres
 const { MongoDBInstrumentation } = require("@opentelemetry/instrumentation-mongodb");
 const { HttpInstrumentation } = require("@opentelemetry/instrumentation-http");
 
-const sdk = new NodeSDK({
-   resource: resourceFromAttributes({
-       [ATTR_SERVICE_NAME]: "todo-service"
-   }),
-
-   traceExporter: new ConsoleSpanExporter(),
-
-   metricReader: new PeriodicExportingMetricReader({
-       exporter: new ConsoleMetricExporter(),
-   }),
-
-   instrumentations: [
-       getNodeAutoInstrumentations(),
-       new ExpressInstrumentation(),
-       new MongoDBInstrumentation(),
-       new HttpInstrumentation()],
- });
+const sdk = new opentelemetry.NodeSDK({
+    resource: resourceFromAttributes({
+        [ATTR_SERVICE_NAME]: "todo-service"
+    }),
+    traceExporter: new OTLPTraceExporter(),
+    metricReader: new PeriodicExportingMetricReader({
+        exporter: new ConsoleMetricExporter(),
+    }),
+    instrumentations: [
+        getNodeAutoInstrumentations(),
+        new ExpressInstrumentation(),
+        new MongoDBInstrumentation(),
+        new HttpInstrumentation()
+    ],
+});
 
 sdk.start();
